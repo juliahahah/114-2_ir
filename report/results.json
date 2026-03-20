@@ -1,0 +1,153 @@
+{
+  "query": "What are the health benefits of green tea?",
+  "model": "google/flan-t5-base",
+  "num_passages": 10,
+  "results": [
+    {
+      "method": "Pointwise",
+      "ranked_indices": [
+        4,
+        0,
+        1,
+        7,
+        6,
+        2,
+        9,
+        5,
+        3,
+        8
+      ],
+      "latency_seconds": 0.964,
+      "forward_passes": 10,
+      "metrics": {
+        "NDCG@10": 0.851,
+        "Precision@10": 0.7,
+        "Recall@10": 1.0,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Pairwise (Heapsort)",
+      "ranked_indices": [
+        6,
+        0,
+        2,
+        1,
+        9
+      ],
+      "latency_seconds": 4.342,
+      "forward_passes": 32,
+      "metrics": {
+        "NDCG@5": 0.5204,
+        "Precision@5": 1.0,
+        "Recall@5": 0.7143,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Listwise (Generation)",
+      "ranked_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "latency_seconds": 1.552,
+      "forward_passes": 6,
+      "metrics": {
+        "NDCG@10": 0.8756,
+        "Precision@10": 0.7,
+        "Recall@10": 1.0,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Listwise (Likelihood)",
+      "ranked_indices": [
+        0,
+        6,
+        2,
+        1,
+        3,
+        4,
+        8,
+        7,
+        5,
+        9
+      ],
+      "latency_seconds": 0.457,
+      "forward_passes": 1,
+      "metrics": {
+        "NDCG@10": 0.8498,
+        "Precision@10": 0.7,
+        "Recall@10": 1.0,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Setwise (Direct)",
+      "ranked_indices": [
+        6,
+        0,
+        1,
+        2,
+        4,
+        7,
+        9,
+        3,
+        5,
+        8
+      ],
+      "latency_seconds": 0.464,
+      "forward_passes": 1,
+      "metrics": {
+        "NDCG@10": 0.7415,
+        "Precision@10": 0.7,
+        "Recall@10": 1.0,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Setwise (Heapsort, c=4)",
+      "ranked_indices": [
+        0,
+        6,
+        7,
+        4,
+        9
+      ],
+      "latency_seconds": 1.885,
+      "forward_passes": 10,
+      "metrics": {
+        "NDCG@5": 0.8777,
+        "Precision@5": 1.0,
+        "Recall@5": 0.7143,
+        "MRR": 1.0
+      }
+    },
+    {
+      "method": "Setwise (BubbleSort, c=4)",
+      "ranked_indices": [
+        0,
+        6,
+        7,
+        9,
+        4
+      ],
+      "latency_seconds": 2.184,
+      "forward_passes": 13,
+      "metrics": {
+        "NDCG@5": 0.8717,
+        "Precision@5": 1.0,
+        "Recall@5": 0.7143,
+        "MRR": 1.0
+      }
+    }
+  ]
+}
