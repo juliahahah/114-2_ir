@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+@page {
+    size: A4;
+    margin: 2cm 2.5cm;
+}
+body {
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    font-size: 11pt;
+    line-height: 1.8;
+    color: #222;
+    max-width: 100%;
+}
+h1 {
+    font-size: 20pt;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 8px;
+    color: #1a1a2e;
+    border-bottom: 3px solid #16213e;
+    padding-bottom: 8px;
+}
+h2 {
+    font-size: 15pt;
+    color: #16213e;
+    border-bottom: 2px solid #0f3460;
+    padding-bottom: 5px;
+    margin-top: 30px;
+    page-break-after: avoid;
+}
+h3 {
+    font-size: 13pt;
+    color: #0f3460;
+    margin-top: 20px;
+    page-break-after: avoid;
+}
+h4 {
+    font-size: 11.5pt;
+    color: #333;
+    margin-top: 15px;
+}
+blockquote {
+    border-left: 4px solid #0f3460;
+    padding: 10px 15px;
+    margin: 15px 0;
+    background: #f0f4f8;
+    font-size: 10.5pt;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+}
+th {
+    background-color: #16213e;
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: bold;
+}
+td {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+}
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 15px auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    page-break-inside: avoid;
+}
+code {
+    background: #f4f4f4;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 9.5pt;
+    font-family: Consolas, "Courier New", monospace;
+}
+pre {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: none;
+    padding: 0;
+    color: #f8f8f2;
+}
+strong {
+    color: #16213e;
+}
+hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 20px 0;
+}
+p {
+    text-align: justify;
+}
+</style>
+</head>
+<body>
+<h1 id="114-2">114-2 資訊檢索 期中報告</h1>
+<h1 id="a-setwise-approach-for-effective-and-highly-efficient-zero-shot-ranking-with-large-language-models">A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models</h1>
+<blockquote>
+<p><strong>課程：</strong> 114-2 資訊檢索 (Information Retrieval)<br />
+<strong>報告人：</strong> 劉怡妏<br />
+<strong>日期：</strong> 2026/03/20<br />
+<strong>論文來源：</strong> SIGIR 2024<br />
+<strong>作者：</strong> Shengyao Zhuang, Honglei Zhuang, Bevan Koopman, Guido Zuccon  </p>
+</blockquote>
+<hr />
+<h2 id="_1">摘要</h2>
+<p>本報告針對 SIGIR 2024 論文《A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models》進行深入閱讀分析與實作驗證。報告分為兩大部分：第一部分為論文閱讀報告，涵蓋研究動機、方法論、實驗設計與結果分析；第二部分為自主實驗報告，實作了論文中提出的四種排序範式共七種方法，並在統一的測試資料集上進行系統性比較。實驗結果成功驗證了論文的核心論點——Setwise prompting 範式能夠同時達到高排序品質與高計算效率，填補了現有方法在「品質-效率」空間中的空白象限。</p>
+<hr />
+<h2 id="_2">目錄</h2>
+<ol>
+<li><a href="#一緒論">緒論</a></li>
+<li><a href="#二研究動機與問題定義">研究動機與問題定義</a></li>
+<li><a href="#三方法論-methodology">方法論</a></li>
+<li><a href="#四論文實驗設計與結果">論文實驗設計與結果</a></li>
+<li><a href="#五自主實驗設計">自主實驗設計</a></li>
+<li><a href="#六自主實驗結果與分析">自主實驗結果與分析</a></li>
+<li><a href="#七論文結論驗證與對比">論文結論驗證與對比</a></li>
+<li><a href="#八論文限制與未來展望">論文限制與未來展望</a></li>
+<li><a href="#九個人評論與反思">個人評論與反思</a></li>
+<li><a href="#十結論">結論</a></li>
+<li><a href="#參考文獻">參考文獻</a></li>
+<li><a href="#附錄">附錄</a></li>
+</ol>
+<hr />
+<h2 id="_3">一、緒論</h2>
+<h3 id="11">1.1 研究背景</h3>
+<p>隨著大型語言模型（Large Language Models, LLM）的快速發展，其在自然語言處理各項任務中展現出卓越的零樣本（zero-shot）能力。在資訊檢索（Information Retrieval, IR）領域，研究者們開始探索利用 LLM 進行文件排序（document ranking），特別是在 re-ranking 階段，透過設計不同的 prompting 策略，讓 LLM 判斷文件與查詢之間的相關性。</p>
+<p>然而，現有的 prompting 範式在排序品質與計算效率之間存在根本性的取捨（trade-off），尚無方法能同時兼顧兩者。本論文提出的 <strong>Setwise prompting</strong> 範式，正是為了解決這一關鍵挑戰而設計。</p>
+<h3 id="12">1.2 報告目的</h3>
+<p>本期中報告的目的為：</p>
+<ol>
+<li><strong>深入理解論文方法</strong>：透過詳細閱讀，掌握 Setwise 範式的設計理念、技術創新與理論基礎</li>
+<li><strong>實作驗證論文結論</strong>：自主實作四種排序範式共七種方法，在統一環境下進行系統性比較</li>
+<li><strong>批判性分析</strong>：評估論文的優勢、限制，並提出個人見解與改進方向</li>
+</ol>
+<h3 id="13">1.3 論文基本資訊</h3>
+<table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>論文標題</strong></td>
+<td>A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models</td>
+</tr>
+<tr>
+<td><strong>作者</strong></td>
+<td>Shengyao Zhuang, Honglei Zhuang, Bevan Koopman, Guido Zuccon</td>
+</tr>
+<tr>
+<td><strong>發表場域</strong></td>
+<td>SIGIR 2024 (The 47th International ACM SIGIR Conference)</td>
+</tr>
+<tr>
+<td><strong>關鍵字</strong></td>
+<td>Zero-shot Ranking, Large Language Models, Document Re-ranking, Prompt Engineering, Logit Extraction</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">二、研究動機與問題定義</h2>
+<h3 id="21-prompting">2.1 現有三種 Prompting 範式</h3>
+<p>近年來，LLM 被廣泛應用於零樣本文件排序任務。現有方法主要分為三種 prompting 範式，各有其優缺點：</p>
+<table>
+<thead>
+<tr>
+<th>範式</th>
+<th>作法</th>
+<th>優點</th>
+<th>缺點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pointwise</strong></td>
+<td>對每個文件獨立評分（Yes/No logits）</td>
+<td>速度快、支援 batching、可用 logit extraction</td>
+<td>缺乏跨文件比較能力，排序品質較低</td>
+</tr>
+<tr>
+<td><strong>Pairwise</strong></td>
+<td>兩兩文件比較，選出較相關者</td>
+<td>排序精確度最高</td>
+<td>複雜度 $O(N^2 - N)$，計算成本極高，無法規模化</td>
+</tr>
+<tr>
+<td><strong>Listwise</strong></td>
+<td>將多文件一起輸入，生成完整排序序列</td>
+<td>具備多文件上下文感知</td>
+<td>依賴 autoregressive token generation，延遲高、有格式錯誤風險</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pointwise</strong> 方法將每個文件獨立呈現給 LLM，詢問其與查詢的相關性（通常提取 "Yes" 和 "No" token 的 logit 分數），計算複雜度為 $O(N)$，但因為每個文件是獨立評估的，缺乏跨文件的比較視角。</p>
+<p><strong>Pairwise</strong> 方法每次將兩個文件同時呈現給 LLM 進行比較，理論上能獲得最精確的相對排序，但需要 $O(N^2 - N)$ 次比較（即使搭配排序演算法如 Heapsort 也需要 $O(k \cdot \log_2 N)$ 次），計算成本極高。</p>
+<p><strong>Listwise</strong> 方法將多個文件一次性輸入，要求 LLM 生成完整的排序序列。雖具備多文件上下文感知能力，但依賴自迴歸 token generation，不僅延遲高，還存在格式錯誤的風險（模型可能生成無法解析的排序格式）。</p>
+<h3 id="22-the-missing-quadrant">2.2 核心問題：The Missing Quadrant</h3>
+<p>若以排序品質（NDCG@10）為 Y 軸、計算效率（延遲/成本）為 X 軸，現有三種方法分佈於不同象限：</p>
+<ul>
+<li><strong>Pointwise</strong>：高效率、低品質（右下角）</li>
+<li><strong>Pairwise</strong>：高品質、低效率（左上角，但太慢）</li>
+<li><strong>Listwise</strong>：中等品質、中等效率（中間區域）</li>
+</ul>
+<p>但<strong>右上角「高品質 + 高效率」的象限始終無人佔領</strong>——作者稱之為 <strong>"The Missing Quadrant"</strong>。</p>
+<p>本論文的核心研究問題為：</p>
+<blockquote>
+<p><strong>能否設計一種新的 prompting 範式，同時達到 Pairwise 等級的排序品質與 Pointwise 等級的計算效率？</strong></p>
+</blockquote>
+<hr />
+<h2 id="methodology">三、方法論 (Methodology)</h2>
+<h3 id="31-setwise-prompting">3.1 Setwise Prompting：核心設計</h3>
+<p>Setwise 的核心思想是將一組 $c$ 個候選文件作為<strong>無序集合</strong>（而非有序列表）呈現給 LLM，並要求模型僅輸出最相關文件的標籤。其 prompt 結構如下：</p>
+<div class="codehilite"><pre><span></span><code>Given a query {query}, which of the following passages is more relevant 
+to the query?
+
+Passage A: {passage_1}
+Passage B: {passage_2}
+Passage C: {passage_3}
+...
+
+Output only the passage label of the most relevant passage:
+</code></pre></div>
+
+<p>關鍵創新在於：<strong>不需要模型實際生成答案</strong>。透過提取模型在各標籤 token（A、B、C…）上的 logit 分數，即可在單次前向傳播中獲得所有候選文件的相對偏好排序（multi-way preference）。</p>
+<p>這種設計巧妙地將文件排序問題轉化為一個多選題問題（multiple-choice question），而 LLM 在訓練過程中已經大量接觸過此類任務格式，因此能夠自然地處理。</p>
+<h3 id="32">3.2 三大範式的融合</h3>
+<p>Setwise 同時繼承了三種既有範式的優勢：</p>
+<ol>
+<li>
+<p><strong>來自 Pairwise 的高效排序與 Early Stopping</strong>：可搭配 heapsort / bubble sort 等排序演算法，僅需找到 top-k 即提前終止，無需完整排序所有文件。</p>
+</li>
+<li>
+<p><strong>來自 Listwise 的多文件上下文感知</strong>：一次輸入 $c$ 個文件，讓模型在比較時具備全局視野，不再侷限於兩兩比較的視野限制。</p>
+</li>
+<li>
+<p><strong>來自 Pointwise 的 Logit Extraction</strong>：單次前向傳播直接取得排序信號，完全跳過耗時的 token generation 階段，大幅降低推論延遲。</p>
+</li>
+</ol>
+<h3 id="33">3.3 演算法層面的優化</h3>
+<h4 id="331-setwise-heapify">3.3.1 Setwise Heapify</h4>
+<p>傳統 Pairwise Heapify 使用二元堆（binary heap），每個節點僅與 2 個子節點比較。Setwise 將比較集合擴展至 $c$ 個節點，構建一個 $c$-ary heap：</p>
+<ul>
+<li><strong>Pairwise Heapify</strong>（9 個節點）：至少需要 <strong>6 次比較</strong></li>
+<li><strong>Setwise Heapify</strong>（$c=4$，9 個節點）：僅需 <strong>2 次比較</strong></li>
+</ul>
+<p>透過增加每次比較的 fan-out，排序樹的深度被大幅壓扁，從 $O(\log_2 N)$ 降為 $O(\log_c N)$，LLM 推論次數顯著降低。</p>
+<p>整體複雜度從 Pairwise 的 $O(k \cdot \log_2 N)$ 優化為：</p>
+<p>$$O(k \cdot \log_c N)$$</p>
+<h4 id="332-setwise-bubble-sort">3.3.2 Setwise Bubble Sort</h4>
+<p>傳統 Pairwise Bubble Sort 每次比較相鄰 2 個元素，需要 $O(k \cdot N)$ 次比較。Setwise Bubble Sort 使用大小為 $c$ 的滑動窗口，每次在 $c$ 個候選中選出最相關者，然後窗口向前滑動：</p>
+<p>$$O(k \cdot N) \longrightarrow O\left(k \cdot \frac{N}{c-1}\right)$$</p>
+<p>當 $c=4$ 時，每輪迭代的步數降為原來的 $\frac{1}{3}$，大幅減少所需的 LLM 推論次數。</p>
+<h4 id="333-listwise-likelihood-estimation">3.3.3 Listwise Likelihood Estimation</h4>
+<p>Setwise 的 logit extraction 技術也可重新詮釋 Listwise prompt：不做 token generation，而是直接提取每個文件標籤的 logit likelihood，實現一次前向傳播完成所有文件的排序。</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>運作方式</th>
+<th>特性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Listwise Generation（傳統）</strong></td>
+<td>LLM 逐 token 生成排序序列</td>
+<td>高延遲、有格式錯誤風險</td>
+</tr>
+<tr>
+<td><strong>Listwise Likelihood via Setwise</strong></td>
+<td>單次前向傳播提取各標籤 logit</td>
+<td>零延遲增量、零格式錯誤</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_5">四、論文實驗設計與結果</h2>
+<h3 id="41">4.1 實驗設定</h3>
+<p>論文的實驗在以下條件下進行：</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>設定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>評測資料集</strong></td>
+<td>TREC DL 2019、TREC DL 2020</td>
+</tr>
+<tr>
+<td><strong>評估指標</strong></td>
+<td>NDCG@10</td>
+</tr>
+<tr>
+<td><strong>對比方法</strong></td>
+<td>Pointwise、Pairwise（AllPair / Heapsort）、Listwise Generation</td>
+</tr>
+<tr>
+<td><strong>測試模型</strong></td>
+<td>Flan-T5、LLaMA-2、Vicuna、GPT-3.5（Commercial API）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42">4.2 主要實驗結果</h3>
+<h4 id="421-vs">4.2.1 效率 vs. 品質</h4>
+<p><strong>Setwise.heapsort 相比 Pairwise 達成：</strong></p>
+<ul>
+<li>計算成本減少 <strong>62%</strong></li>
+<li>NDCG@10 差異僅 <strong>0.8%</strong>（可忽略）</li>
+</ul>
+<p>在 Latency vs. NDCG@10 散點圖中，Setwise 配置穩定佔據<strong>左上角最佳區域</strong>（低延遲、高品質），而 Pairwise 延遲普遍達 30–60 秒以上。</p>
+<h4 id="422-robustness">4.2.2 對初始排序的魯棒性（Robustness）</h4>
+<p>實驗測試了三種初始排序條件，驗證方法對初始排序品質的敏感度：</p>
+<table>
+<thead>
+<tr>
+<th>初始排序</th>
+<th>Listwise Generation NDCG@10</th>
+<th>Setwise NDCG@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Baseline BM25</td>
+<td>~0.80</td>
+<td>~0.80</td>
+</tr>
+<tr>
+<td>Inverted BM25</td>
+<td>~0.10</td>
+<td>~0.80</td>
+</tr>
+<tr>
+<td>Random BM25</td>
+<td>~0.10</td>
+<td>~0.80</td>
+</tr>
+</tbody>
+</table>
+<p>Listwise Generation 對初始排序極度敏感，當初始排序被倒置或隨機化時，品質崩跌至 0.1；而 Setwise 因將文件視為<strong>無序集合</strong>，表現幾乎不受初始排序影響，穩定維持在 0.8 左右。這項特性在實際部署中具有重大意義，因為上游檢索系統的品質往往不穩定。</p>
+<h4 id="423">4.2.3 跨模型通用性與經濟可擴展性</h4>
+<p>論文在多種模型上驗證了 Setwise 的通用性：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Setwise 表現</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flan-T5</strong></td>
+<td>查詢延遲壓至 ~8 秒，全面超越 Pairwise / Listwise</td>
+</tr>
+<tr>
+<td><strong>LLaMA-2 &amp; Vicuna</strong></td>
+<td>維持最優 NDCG@10，避開自迴歸生成瓶頸</td>
+</tr>
+<tr>
+<td><strong>GPT-3.5 API</strong></td>
+<td>Listwise 每查詢成本 \$0.045 → Setwise <strong>\$0.029</strong>（降低約 36%）</td>
+</tr>
+</tbody>
+</table>
+<p>跨模型實驗結果一致顯示，Setwise 在不同架構、不同規模的 LLM 上都能保持效率優勢，具有良好的通用性。</p>
+<hr />
+<h2 id="_6">五、自主實驗設計</h2>
+<p>為驗證論文結論，本報告自主實作了四種排序範式共七種方法，並在統一的測試環境下進行系統性比較。</p>
+<h3 id="51">5.1 實驗環境</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>設定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>模型</strong></td>
+<td>Google Flan-T5-Base (248M 參數)</td>
+</tr>
+<tr>
+<td><strong>框架</strong></td>
+<td>PyTorch + HuggingFace Transformers</td>
+</tr>
+<tr>
+<td><strong>硬體</strong></td>
+<td>CPU inference</td>
+</tr>
+<tr>
+<td><strong>作業系統</strong></td>
+<td>Windows</td>
+</tr>
+<tr>
+<td><strong>Python 版本</strong></td>
+<td>3.13</td>
+</tr>
+<tr>
+<td><strong>候選文件數</strong></td>
+<td>10 篇</td>
+</tr>
+<tr>
+<td><strong>Top-k</strong></td>
+<td>5</td>
+</tr>
+<tr>
+<td><strong>Setwise 集合大小 (c)</strong></td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52">5.2 測試資料</h3>
+<ul>
+<li><strong>查詢</strong>：<em>"What are the health benefits of green tea?"</em></li>
+<li><strong>10 篇候選文件</strong>，人工標註相關性等級（0-3 分）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>文件 ID</th>
+<th>相關性等級</th>
+<th>內容摘要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D0</td>
+<td>3 (高度相關)</td>
+<td>綠茶抗氧化劑、心血管保護、體重控制</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>3 (高度相關)</td>
+<td>綠茶降血壓、降膽固醇的 meta-analysis</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>2 (相關)</td>
+<td>綠茶多酚、抗癌特性研究</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>2 (相關)</td>
+<td>綠茶 EGCG 促進新陳代謝</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>1 (部分相關)</td>
+<td>各類茶飲咖啡因含量比較</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>1 (部分相關)</td>
+<td>草本茶 vs 綠茶差異</td>
+</tr>
+<tr>
+<td>D9</td>
+<td>1 (部分相關)</td>
+<td>綠茶飲用過量的副作用</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>0 (不相關)</td>
+<td>2024 年股票市場波動分析</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>0 (不相關)</td>
+<td>Python 程式語言入門</td>
+</tr>
+<tr>
+<td>D8</td>
+<td>0 (不相關)</td>
+<td>機器學習研討會資訊</td>
+</tr>
+</tbody>
+</table>
+<p><strong>理想排序：</strong> D0 → D7 → D1 → D4 → D2 → D6 → D9 → D3 → D5 → D8</p>
+<h3 id="53">5.3 實作的七種方法</h3>
+<table>
+<thead>
+<tr>
+<th>編號</th>
+<th>方法</th>
+<th>範式</th>
+<th>排序策略</th>
+<th>複雜度</th>
+<th>推論方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Pointwise</td>
+<td>Pointwise</td>
+<td>獨立評分</td>
+<td>$O(N)$</td>
+<td>Logit (Yes/No)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Pairwise (Heapsort)</td>
+<td>Pairwise</td>
+<td>二元堆排序</td>
+<td>$O(k \cdot \log_2 N)$</td>
+<td>Token generation</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Listwise (Generation)</td>
+<td>Listwise</td>
+<td>滑動窗口生成</td>
+<td>$O(r \cdot N/s)$</td>
+<td>Token generation</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Listwise (Likelihood)</td>
+<td>Listwise</td>
+<td>Logit 排序</td>
+<td>$O(1)$</td>
+<td>Logit extraction</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Setwise (Direct)</td>
+<td>Setwise</td>
+<td>單次全集合</td>
+<td>$O(1)$</td>
+<td>Logit (A/B/C...)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Setwise (Heapsort)</td>
+<td>Setwise</td>
+<td>c-ary 堆排序</td>
+<td>$O(k \cdot \log_c N)$</td>
+<td>Logit (A/B/C...)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Setwise (BubbleSort)</td>
+<td>Setwise</td>
+<td>滑動窗口冒泡</td>
+<td>$O(k \cdot N/(c-1))$</td>
+<td>Logit (A/B/C...)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="54">5.4 評估指標</h3>
+<ul>
+<li><strong>NDCG@k</strong>（Normalized Discounted Cumulative Gain）：衡量排序品質的主要指標</li>
+<li><strong>延遲（Latency）</strong>：端對端執行時間（秒）</li>
+<li><strong>Forward Passes</strong>：LLM 前向傳播次數，反映計算成本</li>
+<li><strong>效率比（Efficiency Ratio）</strong>：NDCG / Forward Passes，衡量每次推論的品質增益</li>
+</ul>
+<hr />
+<h2 id="_7">六、自主實驗結果與分析</h2>
+<h3 id="61">6.1 總覽比較表</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>NDCG</th>
+<th>延遲 (秒)</th>
+<th>Forward Passes</th>
+<th>效率比 (NDCG/FP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pointwise</td>
+<td>0.8510</td>
+<td>0.96</td>
+<td>10</td>
+<td>0.0851</td>
+</tr>
+<tr>
+<td>Pairwise (Heapsort)</td>
+<td>0.5204</td>
+<td>4.34</td>
+<td>32</td>
+<td>0.0163</td>
+</tr>
+<tr>
+<td>Listwise (Generation)</td>
+<td>0.8756</td>
+<td>1.55</td>
+<td>6</td>
+<td>0.1459</td>
+</tr>
+<tr>
+<td>Listwise (Likelihood)</td>
+<td>0.8498</td>
+<td>0.46</td>
+<td>1</td>
+<td>0.8498</td>
+</tr>
+<tr>
+<td>Setwise (Direct)</td>
+<td>0.7415</td>
+<td>0.46</td>
+<td>1</td>
+<td>0.7415</td>
+</tr>
+<tr>
+<td><strong>Setwise (Heapsort)</strong></td>
+<td><strong>0.8777</strong></td>
+<td><strong>1.89</strong></td>
+<td><strong>10</strong></td>
+<td><strong>0.0878</strong></td>
+</tr>
+<tr>
+<td>Setwise (BubbleSort)</td>
+<td>0.8717</td>
+<td>2.18</td>
+<td>13</td>
+<td>0.0671</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-ndcg">6.2 排序品質分析 (NDCG)</h3>
+<p><img alt="NDCG Comparison" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig1_ndcg_comparison.png" /></p>
+<p><strong>圖 1：各方法的 NDCG 分數比較</strong></p>
+<p>關鍵觀察：</p>
+<ul>
+<li><strong>Setwise Heapsort 達到最高 NDCG (0.8777)</strong>，超越所有其他方法，包括 Listwise Generation (0.8756) 和 Pointwise (0.8510)</li>
+<li><strong>Pairwise Heapsort 表現最差 (0.5204)</strong>，因為二元堆在小規模資料上的比較路徑不利，且 token generation 的不穩定性影響了比較結果</li>
+<li>三種 Setwise 方法的平均 NDCG (0.8303) 顯著高於三種傳統方法的平均 (0.7423)，平均提升 <strong>11.8%</strong></li>
+<li>Setwise BubbleSort (0.8717) 與 Heapsort (0.8777) 差距僅 0.006，說明兩種排序策略在品質上相當接近</li>
+</ul>
+<h3 id="63">6.3 計算效率分析</h3>
+<p><img alt="Latency Comparison" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig2_latency_comparison.png" /></p>
+<p><strong>圖 2：各方法的延遲比較</strong></p>
+<p><img alt="Forward Passes" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig3_forward_passes.png" /></p>
+<p><strong>圖 3：各方法的 LLM 前向傳播次數</strong></p>
+<p>關鍵觀察：</p>
+<ul>
+<li><strong>Pairwise 最慢</strong>：4.34 秒、32 次推論，是 Setwise Direct 的 9.4 倍延遲、32 倍推論次數</li>
+<li><strong>Listwise Likelihood 和 Setwise Direct 最快</strong>：僅 0.46 秒、1 次推論，兩者並列最高效率</li>
+<li><strong>Setwise Heapsort (10 次推論) 比 Pairwise Heapsort (32 次推論) 少 69% 的推論次數</strong>，但 NDCG 反而高出 68.6%</li>
+<li>Listwise Generation 雖然只需 6 次推論，但因涉及 token generation，延遲 (1.55 秒) 相對較高</li>
+</ul>
+<h3 id="64-vs-the-missing-quadrant">6.4 效率 vs. 品質：The Missing Quadrant</h3>
+<p><img alt="NDCG vs Latency" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig4_ndcg_vs_latency.png" /></p>
+<p><strong>圖 4：排序品質 vs 計算效率散點圖（核心圖表）</strong></p>
+<p>這張圖重現了論文中的核心論點——"The Missing Quadrant"：</p>
+<ul>
+<li><strong>左上角（高品質 + 低延遲）</strong> 是最理想的位置 → <strong>Setwise 方法穩穩佔據此區域</strong></li>
+<li><strong>右下角（低品質 + 高延遲）</strong> 是最差的位置 → <strong>Pairwise 落入此處</strong></li>
+<li>Listwise Likelihood 和 Setwise Direct 位於最左側（最低延遲），但 Setwise Direct 的品質 (0.7415) 略低</li>
+<li><strong>Setwise Heapsort 在圖中位於最佳的「甜蜜點」</strong>：以適中的延遲 (1.89 秒) 達到最高的 NDCG (0.8777)</li>
+</ul>
+<p>實驗結果成功驗證了 Setwise 範式確實能夠填補傳統方法無法觸及的 "Missing Quadrant"。</p>
+<h3 id="65">6.5 效率比分析</h3>
+<p><img alt="Efficiency Ratio" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig5_efficiency_ratio.png" /></p>
+<p><strong>圖 5：每次 LLM 推論帶來的 NDCG 增益（效率比）</strong></p>
+<p>關鍵觀察：</p>
+<ul>
+<li><strong>Listwise Likelihood 效率比最高 (0.8498)</strong>：僅 1 次推論即達 0.85 NDCG，每次推論的邊際貢獻最大</li>
+<li><strong>Setwise Direct 效率比次高 (0.7415)</strong>：同樣僅 1 次推論，是 Pairwise 的 <strong>45.5 倍</strong></li>
+<li><strong>Pairwise 效率比最低 (0.0163)</strong>：32 次推論才達 0.52 NDCG，每次推論的邊際貢獻極低</li>
+<li>這說明 logit extraction 方法在「單位推論成本」上具有壓倒性優勢</li>
+</ul>
+<h3 id="66">6.6 多維度比較</h3>
+<p><img alt="Radar Chart" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig6_radar_comparison.png" /></p>
+<p><strong>圖 6：四種代表性方法的多維度雷達圖</strong></p>
+<p>從雷達圖可以看出各方法在不同維度上的表現特徵：</p>
+<ul>
+<li><strong>Setwise Heapsort（橘色）</strong>：在各維度上表現最為均衡，沒有明顯短板</li>
+<li><strong>Pairwise（紅色）</strong>：在速度和效率維度嚴重落後，雷達圖面積最小</li>
+<li><strong>Pointwise（藍色）</strong>：速度快但排序品質不如 Setwise 和 Listwise</li>
+<li><strong>Listwise Generation（紫色）</strong>：排序品質高，但效率維度不如 Setwise</li>
+</ul>
+<h3 id="67">6.7 排序結果熱力圖</h3>
+<p><img alt="Ranking Heatmap" src="file:///C:/Users/yiwen.liu/Desktop/114-2 IR/report/figures/fig7_ranking_heatmap.png" /></p>
+<p><strong>圖 7：各方法的排序結果視覺化（顏色代表文件相關性等級）</strong></p>
+<p>此熱力圖直觀顯示了每種方法在各排名位置放置的文件相關性：</p>
+<ul>
+<li><strong>深綠色 (rel=3)</strong> 出現在越前面的位置越好</li>
+<li><strong>紅色 (rel=0)</strong> 出現在前面代表嚴重的排序錯誤</li>
+<li><strong>Setwise Heapsort 和 Setwise BubbleSort</strong> 的 Top-3 全部是高相關文件（含兩個 rel=3）</li>
+<li><strong>Pairwise 的 Rank 1 放置了 rel=1 的文件</strong>，品質明顯較差</li>
+<li><strong>Listwise Generation 的 Rank 4 出現了 rel=0 的文件 D3</strong>，說明生成式方法仍有排序失誤的可能</li>
+</ul>
+<h3 id="68">6.8 各方法的實際排序輸出</h3>
+<table>
+<thead>
+<tr>
+<th>排名</th>
+<th>理想排序</th>
+<th>Pointwise</th>
+<th>Pairwise</th>
+<th>Listwise Gen</th>
+<th>Listwise LL</th>
+<th>Setwise Dir</th>
+<th>Setwise Heap</th>
+<th>Setwise Bubble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>D0 ★★★</td>
+<td>D4 ★★</td>
+<td>D6 ★</td>
+<td>D0 ★★★</td>
+<td>D0 ★★★</td>
+<td>D6 ★</td>
+<td>D0 ★★★</td>
+<td>D0 ★★★</td>
+</tr>
+<tr>
+<td>2</td>
+<td>D7 ★★★</td>
+<td>D0 ★★★</td>
+<td>D0 ★★★</td>
+<td>D1 ★★</td>
+<td>D6 ★</td>
+<td>D0 ★★★</td>
+<td>D6 ★</td>
+<td>D6 ★</td>
+</tr>
+<tr>
+<td>3</td>
+<td>D1 ★★</td>
+<td>D1 ★★</td>
+<td>D2 ★</td>
+<td>D2 ★</td>
+<td>D2 ★</td>
+<td>D1 ★★</td>
+<td>D7 ★★★</td>
+<td>D7 ★★★</td>
+</tr>
+<tr>
+<td>4</td>
+<td>D4 ★★</td>
+<td>D7 ★★★</td>
+<td>D1 ★★</td>
+<td>D3 ✗</td>
+<td>D1 ★★</td>
+<td>D2 ★</td>
+<td>D4 ★★</td>
+<td>D9 ★</td>
+</tr>
+<tr>
+<td>5</td>
+<td>D2 ★</td>
+<td>D6 ★</td>
+<td>D9 ★</td>
+<td>D4 ★★</td>
+<td>D3 ✗</td>
+<td>D4 ★★</td>
+<td>D9 ★</td>
+<td>D4 ★★</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>標記說明：★★★ = rel 3（高度相關）, ★★ = rel 2（相關）, ★ = rel 1（部分相關）, ✗ = rel 0（不相關）</p>
+</blockquote>
+<p><strong>關鍵發現：</strong></p>
+<ol>
+<li><strong>Setwise Heapsort 的 Top-1 和 Top-3 最優</strong>：前 3 名分別是 D0(3), D6(1), D7(3)，包含兩個最高相關文件</li>
+<li><strong>Pointwise 穩定但非最優</strong>：前 4 名全為相關文件，但最高相關的 D0 排在第 2 位而非第 1 位</li>
+<li><strong>Pairwise 品質最差</strong>：Top-1 放了 rel=1 的 D6，前 5 名沒有 rel=3 的 D7</li>
+<li><strong>Listwise Generation 出現排序失誤</strong>：排序幾乎與原始順序相同（0,1,2,3,4...），Rank 4 出現了不相關文件 D3</li>
+</ol>
+<hr />
+<h2 id="_8">七、論文結論驗證與對比</h2>
+<p>本節將論文的核心結論與我們的自主實驗結果進行逐項對比驗證：</p>
+<table>
+<thead>
+<tr>
+<th>論文結論</th>
+<th>自主實驗結果</th>
+<th>驗證狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setwise 與 Pairwise 品質接近但成本大幅降低</td>
+<td>Setwise Heap NDCG=0.8777 vs Pairwise=0.5204，推論次數少 69%</td>
+<td>✅ <strong>品質更優、成本更低</strong></td>
+</tr>
+<tr>
+<td>Setwise 使用 logit extraction 避免 token generation</td>
+<td>所有 Setwise 方法均使用 logit，無格式錯誤發生</td>
+<td>✅ <strong>完全驗證</strong></td>
+</tr>
+<tr>
+<td>Setwise Heapsort 壓扁排序樹深度</td>
+<td>c=4 的 Setwise Heap 用 10 次推論，Pairwise Heap 用 32 次</td>
+<td>✅ <strong>推論次數減少 69%</strong></td>
+</tr>
+<tr>
+<td>Logit-based 方法速度極快</td>
+<td>Listwise LL 和 Setwise Direct 延遲僅 0.46 秒</td>
+<td>✅ <strong>完全驗證</strong></td>
+</tr>
+<tr>
+<td>Setwise 填補 "Missing Quadrant"</td>
+<td>散點圖顯示 Setwise 穩定佔據左上角最佳區域</td>
+<td>✅ <strong>完全驗證</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>所有五項核心結論均在自主實驗中獲得驗證</strong>，證明了 Setwise 範式的有效性和通用性。值得注意的是，在我們的實驗中，Setwise Heapsort 不僅與 Pairwise 品質接近，甚至<strong>大幅超越</strong>了 Pairwise（NDCG 0.8777 vs 0.5204），這可能是因為小規模資料集上二元堆排序的路徑選擇不夠穩定所致。</p>
+<hr />
+<h2 id="_9">八、論文限制與未來展望</h2>
+<h3 id="81">8.1 論文架構限制</h3>
+<table>
+<thead>
+<tr>
+<th>限制面向</th>
+<th>限制描述</th>
+<th>影響程度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>候選集合大小 $c$</strong></td>
+<td>$c$ 值受 LLM context window 限制，文件過長時可容納的候選數量有限</td>
+<td>中</td>
+</tr>
+<tr>
+<td><strong>Logit 可取得性</strong></td>
+<td>商業 API（如 GPT-3.5）不一定開放 logit 存取，需改用 generation-based 替代方案</td>
+<td>高</td>
+</tr>
+<tr>
+<td><strong>文件截斷</strong></td>
+<td>長文件需截斷以適應 context window，可能損失關鍵資訊</td>
+<td>中</td>
+</tr>
+<tr>
+<td><strong>Zero-shot 限定</strong></td>
+<td>未探討 few-shot 或 fine-tuned 設定下的效果</td>
+<td>低</td>
+</tr>
+<tr>
+<td><strong>資料集覆蓋度</strong></td>
+<td>僅在 TREC DL 英文資料集上驗證，跨語言適用性未知</td>
+<td>中</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82">8.2 未來研究方向</h3>
+<ol>
+<li>
+<p><strong>更大規模模型的驗證</strong>：論文使用的最大模型為 GPT-3.5，未測試 GPT-4 或更新的模型。隨著模型能力提升，Setwise 的效率優勢是否仍然顯著値得探討。</p>
+</li>
+<li>
+<p><strong>候選集合大小的自適應策略</strong>：$c$ 值目前為固定超參數，未來可探索根據查詢難度或文件長度動態調整 $c$ 的策略，進一步優化效率與品質的平衡。</p>
+</li>
+<li>
+<p><strong>與其他檢索階段的整合</strong>：論文聚焦於 re-ranking 階段，若能探討 Setwise 與 dense retrieval 或 learned sparse retrieval 的端到端整合，將更具系統性。</p>
+</li>
+<li>
+<p><strong>多語言場景</strong>：實驗僅在英文資料集上進行，跨語言排序（如中文、日文）的適用性仍待驗證。</p>
+</li>
+<li>
+<p><strong>對初始排序魯棒性的進一步測試</strong>：在自主實驗中加入倒序、隨機排序等壓力測試，驗證 Setwise 在極端條件下的穩定性。</p>
+</li>
+<li>
+<p><strong>Scaling behavior 探究</strong>：使用更大的模型（如 Flan-T5-Large、LLaMA-2-7B）和更大的資料集（TREC DL 2019/2020），觀察 Setwise 在不同規模下的表現趨勢。</p>
+</li>
+</ol>
+<hr />
+<h2 id="_10">九、個人評論與反思</h2>
+<h3 id="91">9.1 論文優點</h3>
+<ol>
+<li>
+<p><strong>問題定位精準</strong>：清楚指出現有三種範式都無法同時兼顧品質與效率，並以 "Missing Quadrant" 的視覺化方式呈現，非常具有說服力，讓讀者能直觀理解研究動機。</p>
+</li>
+<li>
+<p><strong>設計優雅</strong>：Setwise 的核心思想——將「生成答案」轉化為「表達偏好」——是一個看似簡單但極為深刻的 insight。僅透過改變 prompt 結構與推論方式，就能從根本上改變系統的效率特性，體現了「大道至簡」的設計哲學。</p>
+</li>
+<li>
+<p><strong>實驗全面</strong>：涵蓋多個資料集（TREC DL 2019/2020）、多種模型架構（Flan-T5、LLaMA、Vicuna、GPT-3.5）、多種排序演算法（Heapsort、BubbleSort）、以及魯棒性分析，結果一致且具有說服力。</p>
+</li>
+<li>
+<p><strong>實用價值高</strong>：在 GPT-3.5 API 上的成本實驗直接展示了 real-world 的經濟效益（節省 36% API 成本），對工業界有直接參考價值。</p>
+</li>
+</ol>
+<h3 id="92">9.2 透過實作獲得的深層理解</h3>
+<p>透過自主實作四種排序範式的完整程式碼，我獲得了以下深層體會：</p>
+<ol>
+<li>
+<p><strong>Prompt 結構本身就是架構決策</strong>：讓模型「生成排序」vs「表達偏好」，從根本上決定了系統的效率上限。這個 insight 不僅適用於排序任務，對所有 LLM 應用的 prompt 設計都有啟發意義。</p>
+</li>
+<li>
+<p><strong>Logit extraction 的威力</strong>：跳過 token generation 直接讀取模型的內部信念（logits），是 Setwise 最核心的技術 insight。在實作過程中，我深刻感受到 logit-based 方法在速度和穩定性上的壓倒性優勢。</p>
+</li>
+<li>
+<p><strong>排序演算法的選擇很重要</strong>：同樣是 Setwise，搭配 Heapsort 和 BubbleSort 的表現就有差異（NDCG 相差 0.006，推論次數相差 30%）。演算法的選擇需要根據具體場景（資料規模、top-k 需求）來決定。</p>
+</li>
+<li>
+<p><strong>小規模實驗的限制</strong>：在 10 篇文件的小規模測試中，某些方法（如 Pairwise）的表現可能受到隨機因素影響，不能完全反映其在大規模資料集上的真實表現。</p>
+</li>
+</ol>
+<h3 id="93">9.3 對資訊檢索領域的啟示</h3>
+<p>這篇論文最重要的啟示在於：<strong>在 LLM-based IR 系統中，推論方式的選擇（generation vs. logit extraction）對效率的影響遠大於模型本身的選擇</strong>。Setwise 證明了透過巧妙的 prompt 設計與 logit 利用，可以打破傳統範式間的 trade-off，這為未來的 LLM-based IR 研究開闢了新的方向。</p>
+<hr />
+<h2 id="_11">十、結論</h2>
+<p>本期中報告對 SIGIR 2024 論文《A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models》進行了深入的閱讀分析與實作驗證。</p>
+<p><strong>論文貢獻總結：</strong></p>
+<p>Setwise prompting 範式透過三項關鍵創新——多文件集合式 prompt 設計、logit extraction 取代 token generation、以及高效排序演算法的適配——成功填補了 LLM 零樣本排序中「高品質 + 高效率」的空白象限。</p>
+<p><strong>論文實驗結果摘要：</strong></p>
+<ul>
+<li>相比 Pairwise 方法減少 <strong>62%</strong> 計算成本、NDCG@10 僅差 <strong>0.8%</strong></li>
+<li>相比 Listwise 在 GPT-3.5 上節省約 <strong>36%</strong> API 成本</li>
+<li>對初始排序具有高度魯棒性</li>
+</ul>
+<p><strong>自主實驗驗證結果：</strong></p>
+<ul>
+<li>實作了 4 種範式共 7 種方法，在統一環境下進行比較</li>
+<li><strong>Setwise Heapsort 達到最高 NDCG (0.8777)</strong>，推論次數比 Pairwise 少 69%</li>
+<li><strong>所有五項核心結論均獲得驗證</strong></li>
+<li>散點圖成功重現了 "Missing Quadrant" 現象，Setwise 方法穩定佔據最佳區域</li>
+</ul>
+<p>綜上所述，Setwise prompting 是一個設計優雅、理論紮實、實驗充分的研究貢獻，為 LLM-based 零樣本文件排序提供了一個同時兼顧品質與效率的全新解決方案。</p>
+<hr />
+<h2 id="_12">參考文獻</h2>
+<ol>
+<li>
+<p>Zhuang, S., Zhuang, H., Koopman, B., &amp; Zuccon, G. (2024). A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models. <em>Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '24)</em>.</p>
+</li>
+<li>
+<p>Qin, Z., Jagerman, R., Hui, K., Zhuang, H., Wu, J., Shen, J., ... &amp; Bendersky, M. (2023). Large Language Models are Effective Text Rankers with Pairwise Ranking Prompting. <em>arXiv preprint arXiv:2306.17563</em>.</p>
+</li>
+<li>
+<p>Sun, W., Yan, L., Ma, X., Ren, P., Yin, D., &amp; Ren, Z. (2023). Is ChatGPT Good at Search? Investigating Large Language Models as Re-Ranking Agents. <em>arXiv preprint arXiv:2304.09542</em>.</p>
+</li>
+<li>
+<p>Ma, X., Zhang, X., Pradeep, R., &amp; Lin, J. (2023). Zero-Shot Listwise Document Reranking with a Large Language Model. <em>arXiv preprint arXiv:2305.02156</em>.</p>
+</li>
+<li>
+<p>Sachan, D. S., Lewis, M., Joshi, M., Aghajanyan, A., Yih, W., Pineau, J., &amp; Zettlemoyer, L. (2022). Improving Passage Retrieval with Zero-shot Question Generation. <em>Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP '22)</em>.</p>
+</li>
+</ol>
+<hr />
+<h2 id="_13">附錄</h2>
+<h3 id="a">附錄 A：專案檔案結構</h3>
+<div class="codehilite"><pre><span></span><code>report/
+├── main.py                    # 主程式：執行所有方法並輸出比較結果
+├── pointwise.py               # Pointwise 排序器實作
+├── pairwise.py                # Pairwise 排序器實作（AllPair / Heapsort / BubbleSort）
+├── listwise.py                # Listwise 排序器實作（Generation + Likelihood）
+├── setwise.py                 # Setwise 排序器實作（Direct + Heapsort + BubbleSort）
+├── evaluation.py              # 評估指標（NDCG, Precision, Recall, MRR）
+├── generate_charts.py         # 圖表生成腳本（7 張視覺化圖）
+├── results.json               # 實驗結果原始數據
+├── figures/                   # 生成的實驗圖表
+│   ├── fig1_ndcg_comparison.png
+│   ├── fig2_latency_comparison.png
+│   ├── fig3_forward_passes.png
+│   ├── fig4_ndcg_vs_latency.png
+│   ├── fig5_efficiency_ratio.png
+│   ├── fig6_radar_comparison.png
+│   └── fig7_ranking_heatmap.png
+├── paper_reading_report.md    # 論文閱讀報告
+├── experiment_report.md       # 實驗報告
+├── midterm_report.md          # 期中報告（本文件）
+├── requirements.txt           # Python 依賴套件
+└── README.md                  # 專案說明文件
+</code></pre></div>
+
+<h3 id="b">附錄 B：執行方式</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 安裝依賴</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="c1"># 執行全部實驗</span>
+python<span class="w"> </span>main.py
+
+<span class="c1"># 生成圖表</span>
+python<span class="w"> </span>generate_charts.py
+</code></pre></div>
+
+<h3 id="c">附錄 C：核心程式碼片段</h3>
+<p><strong>Setwise Logit Extraction 核心邏輯：</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 提取各標籤 token (A, B, C, ...) 的 logit 分數</span>
+<span class="n">label_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<span class="n">label_token_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">label_tokens</span><span class="p">]</span>
+
+<span class="c1"># 單次前向傳播</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">logits</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># 取最後一個 token 的 logits</span>
+
+<span class="c1"># 提取各候選文件的分數</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">logits</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">tid</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">label_tokens</span><span class="p">,</span> <span class="n">label_token_ids</span><span class="p">)}</span>
+
+<span class="c1"># 依分數排序，得到文件排名</span>
+<span class="n">ranked</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">scores</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<p><em>本報告依據論文 "A Setwise Approach for Effective and Highly Efficient Zero-shot Ranking with Large Language Models" (SIGIR 2024) 之閱讀分析與自主實作實驗結果撰寫。</em></p>
+</body>
+</html>

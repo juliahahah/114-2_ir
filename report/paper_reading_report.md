@@ -1,7 +1,7 @@
 # Paper Reading Report
 
 > **課程：** 114-2 資訊檢索 (Information Retrieval)  
-> **報告人：** 劉議文  
+> **報告人：** 劉怡妏
 > **日期：** 2026/03/20  
 
 ---
